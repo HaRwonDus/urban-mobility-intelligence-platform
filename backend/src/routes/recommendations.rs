@@ -1,23 +1,10 @@
-use crate::state::AppState;
+use crate::{models::Recommendation, state::AppState};
 use axum::{extract::State, routing::get, Json, Router};
-use chrono::{DateTime, Utc};
-use serde::Serialize;
-use sqlx::FromRow;
-use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/recommendations", get(list_recommendations))
-}
-
-#[derive(Debug, Serialize, FromRow)]
-struct Recommendation {
-    id: Uuid,
-    area: String,
-    problem: String,
-    recommendation: String,
-    confidence: f64,
-    model_name: String,
-    created_at: DateTime<Utc>,
+    Router::new()
+        .route("/recommendations", get(list_recommendations))
+        .route("/api/recommendations", get(list_recommendations))
 }
 
 async fn list_recommendations(

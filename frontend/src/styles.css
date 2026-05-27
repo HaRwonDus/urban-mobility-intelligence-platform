@@ -153,6 +153,32 @@ button {
   color: #ffffff;
 }
 
+.primary:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.sync-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.sync-actions span {
+  max-width: 320px;
+  color: #52606f;
+  font-size: 13px;
+  text-align: right;
+}
+
+.sync-actions .ok {
+  color: #0b6b58;
+}
+
+.sync-actions .error {
+  color: #c53d31;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -168,42 +194,43 @@ button {
 }
 
 .map-panel {
+  position: relative;
   min-height: 530px;
   overflow: hidden;
 }
 
 .map-surface {
   position: relative;
+  width: 100%;
   min-height: 530px;
-  background:
-    linear-gradient(90deg, rgba(20, 32, 42, 0.08) 1px, transparent 1px),
-    linear-gradient(rgba(20, 32, 42, 0.08) 1px, transparent 1px),
-    #dfe8e8;
-  background-size: 52px 52px;
+  background: #dfe8e8;
 }
 
-.map-surface::before {
-  content: "";
-  position: absolute;
-  inset: 11% 8%;
-  border: 2px solid rgba(18, 78, 86, 0.18);
-  transform: rotate(-9deg);
+.real-map {
+  height: 530px;
 }
 
-.heat {
+.map-error {
   position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #52606f;
+}
+
+.map-heat {
   width: 64px;
   height: 64px;
-  transform: translate(-50%, -50%);
   border-radius: 50%;
   color: #ffffff;
   font-weight: 800;
+  border: 3px solid rgba(255, 255, 255, 0.92);
   box-shadow: 0 12px 28px rgba(22, 34, 45, 0.18);
   cursor: pointer;
 }
 
-.heat.focus {
-  outline: 4px solid rgba(255, 255, 255, 0.9);
+.map-heat.focus {
+  outline: 4px solid rgba(14, 124, 102, 0.32);
 }
 
 .bad {
@@ -220,29 +247,6 @@ button {
 
 .great {
   background: #2563a9;
-}
-
-.route-line {
-  position: absolute;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(37, 99, 169, 0.62);
-  transform-origin: left center;
-}
-
-.route-line.one {
-  width: 46%;
-  left: 23%;
-  top: 45%;
-  transform: rotate(-12deg);
-}
-
-.route-line.two {
-  width: 36%;
-  left: 35%;
-  top: 62%;
-  transform: rotate(18deg);
-  background: rgba(14, 124, 102, 0.62);
 }
 
 .map-label {
@@ -358,4 +362,3 @@ dd {
     border-bottom: 1px solid #d8e0e7;
   }
 }
-

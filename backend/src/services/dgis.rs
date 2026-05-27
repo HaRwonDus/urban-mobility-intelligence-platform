@@ -1,7 +1,6 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use reqwest::Client;
 use serde_json::Value;
-use std::env;
 
 #[derive(Clone)]
 pub struct DgisClient {
@@ -10,11 +9,11 @@ pub struct DgisClient {
 }
 
 impl DgisClient {
-    pub fn from_env() -> Result<Self> {
-        Ok(Self {
-            api_key: env::var("DGIS_API_KEY").context("DGIS_API_KEY is required")?,
+    pub fn new(api_key: String) -> Self {
+        Self {
+            api_key,
             http: Client::new(),
-        })
+        }
     }
 
     pub async fn search_places(
@@ -26,9 +25,15 @@ impl DgisClient {
         let mut request = self
             .http
             .get("https://catalog.api.2gis.com/3.0/items")
-            .query(&[("q", query), ("key", self.api_key.as_str())]);
+            .query(&[
+                ("q", query),
+                ("key", self.api_key.as_str()),
+                ("location", "76.9286,43.2489"),
+                ("radius", "30000"),
+                ("fields", "items.point,items.address,items.full_name"),
+            ]);
 
-        if let Some(city) = city {
+        if let Some(city) = city.filter(|value| !value.eq_ignore_ascii_case("almaty")) {
             request = request.query(&[("city_name", city)]);
         }
 

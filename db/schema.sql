@@ -7,13 +7,35 @@ DO $$ BEGIN
     'mall',
     'hospital',
     'stop',
+    'metro',
     'station',
     'hub',
+    'bus_station',
+    'university',
     'district'
   );
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+
+ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'metro';
+ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'bus_station';
+ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'university';
+
+CREATE TABLE IF NOT EXISTS districts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL UNIQUE,
+  lat DOUBLE PRECISION NOT NULL,
+  lon DOUBLE PRECISION NOT NULL,
+  population INTEGER,
+  geom GEOGRAPHY(POINT, 4326) GENERATED ALWAYS AS (
+    ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography
+  ) STORED,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS districts_geom_idx ON districts USING GIST (geom);
 
 CREATE TABLE IF NOT EXISTS city_objects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,15 +45,39 @@ CREATE TABLE IF NOT EXISTS city_objects (
   lat DOUBLE PRECISION NOT NULL,
   lon DOUBLE PRECISION NOT NULL,
   address TEXT,
+  district_id UUID REFERENCES districts(id) ON DELETE SET NULL,
   source TEXT NOT NULL DEFAULT 'manual',
+  raw JSONB NOT NULL DEFAULT '{}'::jsonb,
   geom GEOGRAPHY(POINT, 4326) GENERATED ALWAYS AS (
     ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography
   ) STORED,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (source, external_id)
 );
+
+ALTER TABLE city_objects
+  ADD COLUMN IF NOT EXISTS district_id UUID REFERENCES districts(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS raw JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+DO $$ BEGIN
+  ALTER TABLE city_objects ADD CONSTRAINT city_objects_source_external_id_key UNIQUE (source, external_id);
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE INDEX IF NOT EXISTS city_objects_geom_idx ON city_objects USING GIST (geom);
 CREATE INDEX IF NOT EXISTS city_objects_type_idx ON city_objects (type);
+CREATE INDEX IF NOT EXISTS city_objects_district_idx ON city_objects (district_id);
+
+CREATE TABLE IF NOT EXISTS transport_stops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  city_object_id UUID NOT NULL UNIQUE REFERENCES city_objects(id) ON DELETE CASCADE,
+  stop_kind TEXT NOT NULL,
+  route_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS routes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -43,6 +89,20 @@ CREATE TABLE IF NOT EXISTS routes (
   source TEXT NOT NULL DEFAULT '2gis',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS mobility_scores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  district_id UUID NOT NULL REFERENCES districts(id) ON DELETE CASCADE,
+  avg_time_to_stop_min NUMERIC(7,2) NOT NULL,
+  avg_time_to_hub_min NUMERIC(7,2) NOT NULL,
+  poi_density NUMERIC(8,3) NOT NULL,
+  connectivity_score NUMERIC(5,2) NOT NULL,
+  score NUMERIC(5,2) NOT NULL CHECK (score >= 0 AND score <= 100),
+  calculated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS mobility_scores_district_idx
+  ON mobility_scores (district_id, calculated_at DESC);
 
 CREATE TABLE IF NOT EXISTS accessibility_scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,6 +118,7 @@ CREATE INDEX IF NOT EXISTS accessibility_scores_district_idx
 
 CREATE TABLE IF NOT EXISTS ai_recommendations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  district_id UUID REFERENCES districts(id) ON DELETE CASCADE,
   area TEXT NOT NULL,
   problem TEXT NOT NULL,
   recommendation TEXT NOT NULL,
@@ -66,35 +127,35 @@ CREATE TABLE IF NOT EXISTS ai_recommendations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-INSERT INTO accessibility_scores (district, avg_time_to_stop, avg_time_to_hub, score)
-VALUES
-  ('Алмалинский', 7, 14, 78),
-  ('Ауэзовский', 13, 21, 54),
-  ('Бостандыкский', 10, 18, 68),
-  ('Наурызбайский', 19, 27, 31),
-  ('Турксибский', 16, 24, 43),
-  ('Медеуский', 12, 20, 62)
-ON CONFLICT DO NOTHING;
+ALTER TABLE ai_recommendations
+  ADD COLUMN IF NOT EXISTS district_id UUID REFERENCES districts(id) ON DELETE CASCADE;
 
-INSERT INTO ai_recommendations (area, problem, recommendation, confidence)
-VALUES
-  (
-    'Наурызбайский',
-    'High activity density with weak access to trunk transport',
-    'Evaluate an express route or dedicated feeder line for this area.',
-    0.82
-  ),
-  (
-    'Турксибский',
-    'Long average time to transfer hub',
-    'Consider a transfer hub near the strongest stop cluster.',
-    0.74
-  ),
-  (
-    'Ауэзовский',
-    'Likely route duplication',
-    'Audit overlapping routes and move capacity toward underserved corridors.',
-    0.69
-  )
-ON CONFLICT DO NOTHING;
+CREATE INDEX IF NOT EXISTS ai_recommendations_district_idx
+  ON ai_recommendations (district_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS sync_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL DEFAULT '2gis',
+  status TEXT NOT NULL,
+  objects_loaded INTEGER NOT NULL DEFAULT 0,
+  districts_updated INTEGER NOT NULL DEFAULT 0,
+  message TEXT,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ
+);
+
+INSERT INTO districts (name, slug, lat, lon, population)
+VALUES
+  ('Almalinsky', 'almalinsky', 43.2489, 76.9286, 220000),
+  ('Auezovsky', 'auezovsky', 43.2327, 76.8477, 310000),
+  ('Bostandyk', 'bostandyk', 43.2034, 76.9067, 360000),
+  ('Nauryzbay', 'nauryzbay', 43.1972, 76.7825, 160000),
+  ('Turksib', 'turksib', 43.3335, 76.9870, 235000),
+  ('Medeu', 'medeu', 43.2244, 76.9958, 230000),
+  ('Zhetysu', 'zhetysu', 43.2901, 76.9350, 170000),
+  ('Alatau', 'alatau', 43.3006, 76.8287, 290000)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  lat = EXCLUDED.lat,
+  lon = EXCLUDED.lon,
+  population = EXCLUDED.population;

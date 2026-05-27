@@ -1,4 +1,4 @@
-use crate::{services::dgis::DgisClient, state::AppState};
+use crate::state::AppState;
 use axum::{
     extract::{Query, State},
     routing::{get, post},
@@ -11,7 +11,9 @@ use uuid::Uuid;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/objects", get(list_objects))
+        .route("/api/objects", get(list_objects))
         .route("/objects/search", post(search_objects))
+        .route("/api/objects/search", post(search_objects))
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,10 +86,11 @@ struct SearchObjectsResponse {
 }
 
 async fn search_objects(
+    State(state): State<AppState>,
     Json(payload): Json<SearchObjectsRequest>,
 ) -> Result<Json<SearchObjectsResponse>, String> {
-    let client = DgisClient::from_env().map_err(|err| err.to_string())?;
-    let items = client
+    let items = state
+        .dgis
         .search_places(
             &payload.query,
             payload.city.as_deref(),

@@ -30,7 +30,7 @@ services:
     build:
       context: ./ai-service
     environment:
-      DATABASE_URL: postgresql://mobility:mobility@postgres:5432/Urban%20Mobility%20DB
+      DATABASE_URL: postgresql://mobility:mobility@postgres:5432/postgres?dbname=Urban%20Mobility%20DB
       WANDB_MODE: disabled
     ports:
       - "127.0.0.1:8010:8010"
@@ -43,7 +43,7 @@ services:
       context: ./backend
     environment:
       API_ADDR: 0.0.0.0:8000
-      DATABASE_URL: postgres://mobility:mobility@postgres:5432/Urban%20Mobility%20DB
+      DATABASE_URL: postgres://mobility:mobility@postgres:5432/postgres?dbname=Urban%20Mobility%20DB
       REDIS_URL: redis://redis:6379
       AI_SERVICE_URL: http://ai-service:8010
       DGIS_API_KEY: ${DGIS_API_KEY:-replace_me}
@@ -63,6 +63,7 @@ services:
       context: ./frontend
     environment:
       VITE_API_URL: http://127.0.0.1:8000
+      VITE_DGIS_MAPGL_KEY: ${DGIS_API_KEY:-replace_me}
     ports:
       - "127.0.0.1:5173:5173"
     depends_on:

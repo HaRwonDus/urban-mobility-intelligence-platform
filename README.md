@@ -56,6 +56,12 @@ docker compose up --build
 - AI service: http://127.0.0.1:8010/health
 - PostgreSQL from host tools: `127.0.0.1:15432`
 
+Local PostgreSQL DSN:
+
+```text
+postgres://mobility:mobility@localhost:15432/postgres?dbname=Urban%20Mobility%20DB
+```
+
 For local development without Docker, run services manually:
 
 ```powershell
@@ -77,12 +83,30 @@ npm run dev
 
 ## Main API Endpoints
 
-- `GET /health`
-- `GET /objects?type=school`
-- `POST /objects/search`
-- `GET /accessibility`
+- `GET /api/health`
+- `GET /api/districts`
+- `GET /api/districts/:id/score`
+- `GET /api/objects?type=school`
+- `POST /api/objects/search`
+- `POST /api/sync/2gis`
+- `GET /api/sync/logs`
+- `GET /api/accessibility`
 - `POST /routes`
-- `GET /recommendations`
+- `GET /api/recommendations`
+
+## MVP-2 Data Flow
+
+`POST /api/sync/2gis` loads Almaty POI from 2GIS, stores objects in PostGIS, assigns each object to the nearest district, recalculates mobility scores, writes sync logs, and generates rule-based AI recommendations.
+
+Accessibility score formula:
+
+```text
+score =
+  40% stop proximity
++ 25% metro / hub proximity
++ 20% POI density
++ 15% important-object connectivity
+```
 
 ## MVP Roadmap
 

@@ -6,7 +6,9 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/accessibility", get(list_accessibility))
+    Router::new()
+        .route("/accessibility", get(list_accessibility))
+        .route("/api/accessibility", get(list_accessibility))
 }
 
 #[derive(Debug, Serialize, FromRow)]

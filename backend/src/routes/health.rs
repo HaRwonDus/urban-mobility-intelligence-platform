@@ -5,7 +5,9 @@ pub fn router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
-    Router::new().route("/health", get(health))
+    Router::new()
+        .route("/health", get(health))
+        .route("/api/health", get(health))
 }
 
 #[derive(Serialize)]
