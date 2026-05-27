@@ -29,13 +29,18 @@ CREATE TABLE IF NOT EXISTS districts (
   lat DOUBLE PRECISION NOT NULL,
   lon DOUBLE PRECISION NOT NULL,
   population INTEGER,
+  boundary GEOMETRY(POLYGON, 4326),
   geom GEOGRAPHY(POINT, 4326) GENERATED ALWAYS AS (
     ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography
   ) STORED,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE districts
+  ADD COLUMN IF NOT EXISTS boundary GEOMETRY(POLYGON, 4326);
+
 CREATE INDEX IF NOT EXISTS districts_geom_idx ON districts USING GIST (geom);
+CREATE INDEX IF NOT EXISTS districts_boundary_idx ON districts USING GIST (boundary);
 
 CREATE TABLE IF NOT EXISTS city_objects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -159,3 +164,7 @@ ON CONFLICT (slug) DO UPDATE SET
   lat = EXCLUDED.lat,
   lon = EXCLUDED.lon,
   population = EXCLUDED.population;
+
+UPDATE districts
+SET boundary = ST_Buffer(geom, 5500)::geometry
+WHERE boundary IS NULL;

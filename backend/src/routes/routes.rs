@@ -14,6 +14,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/routes", get(routes_overview))
         .route("/api/routes/gaps", get(route_gaps))
         .route("/api/routes/suggestions", get(route_suggestions))
+        .route("/api/routes/matrix", get(route_matrix))
         .route("/api/routes/simulate", post(simulate_route))
 }
 
@@ -85,6 +86,16 @@ struct RouteComparison {
     priority: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
+struct RouteMatrixCell {
+    origin: String,
+    destination: String,
+    current_time_min: i32,
+    target_time_min: i32,
+    gap_min: i32,
+    priority: String,
+}
+
 #[derive(Debug, Serialize)]
 struct RoutesOverview {
     gaps: Vec<RouteGap>,
@@ -153,6 +164,11 @@ async fn route_gaps(State(state): State<AppState>) -> Result<Json<Vec<RouteGap>>
 async fn route_suggestions(State(state): State<AppState>) -> Result<Json<Vec<SuggestedRoute>>, String> {
     let metrics = load_district_metrics(&state).await?;
     Ok(Json(build_suggestions(&metrics)))
+}
+
+async fn route_matrix(State(state): State<AppState>) -> Result<Json<Vec<RouteMatrixCell>>, String> {
+    let metrics = load_district_metrics(&state).await?;
+    Ok(Json(build_matrix(&metrics)))
 }
 
 async fn simulate_route(
@@ -317,6 +333,38 @@ fn build_comparison(metrics: &[DistrictMetric]) -> Vec<RouteComparison> {
                 affected_poi: item.poi_density.round() as i32,
                 priority: priority_for(item.score).to_string(),
             }
+        })
+        .collect()
+}
+
+fn build_matrix(metrics: &[DistrictMetric]) -> Vec<RouteMatrixCell> {
+    metrics
+        .iter()
+        .flat_map(|origin| {
+            metrics.iter().filter_map(move |destination| {
+                if origin.name == destination.name {
+                    return None;
+                }
+
+                let current = estimate_connection_time(origin, destination);
+                let target = estimate_target_time(origin, destination);
+                let gap = (current - target).max(0);
+                Some(RouteMatrixCell {
+                    origin: origin.name.clone(),
+                    destination: destination.name.clone(),
+                    current_time_min: current,
+                    target_time_min: target,
+                    gap_min: gap,
+                    priority: if gap >= 24 {
+                        "high"
+                    } else if gap >= 14 {
+                        "medium"
+                    } else {
+                        "low"
+                    }
+                    .to_string(),
+                })
+            })
         })
         .collect()
 }

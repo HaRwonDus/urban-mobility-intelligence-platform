@@ -218,24 +218,39 @@ async fn recalculate_scores(state: &AppState) -> Result<i32> {
           SELECT
             d.id AS district_id,
             d.name AS district,
-            COALESCE(MIN(ST_Distance(d.geom, stop.geom)) / 80.0, 30.0) AS avg_time_to_stop_min,
-            COALESCE(MIN(ST_Distance(d.geom, hub.geom)) / 80.0, 35.0) AS avg_time_to_hub_min,
-            COUNT(DISTINCT poi.id) FILTER (
-              WHERE ST_DWithin(d.geom, poi.geom, 5000)
-            )::float8 AS poi_density,
-            LEAST(100.0, COUNT(DISTINCT important.id) FILTER (
-              WHERE ST_DWithin(d.geom, important.geom, 7000)
-            )::float8 * 8.0) AS connectivity_score
+            COALESCE(nearest_stop.distance_m / 80.0, 30.0) AS avg_time_to_stop_min,
+            COALESCE(nearest_hub.distance_m / 80.0, 35.0) AS avg_time_to_hub_min,
+            COALESCE(poi.poi_density, 0.0) AS poi_density,
+            LEAST(100.0, COALESCE(important.important_count, 0.0) * 8.0) AS connectivity_score
           FROM districts d
-          LEFT JOIN city_objects stop
-            ON stop.type::text IN ('stop', 'metro', 'station', 'hub', 'bus_station')
-          LEFT JOIN city_objects hub
-            ON hub.type::text IN ('metro', 'station', 'hub', 'bus_station')
-          LEFT JOIN city_objects poi
-            ON poi.type::text IN ('school', 'mall', 'hospital', 'university')
-          LEFT JOIN city_objects important
-            ON important.type::text IN ('school', 'hospital', 'university', 'station')
-          GROUP BY d.id, d.name
+          LEFT JOIN LATERAL (
+            SELECT ST_Distance(d.geom, o.geom)::float8 AS distance_m
+            FROM city_objects o
+            WHERE o.type::text IN ('stop', 'metro', 'station', 'hub', 'bus_station')
+              AND ST_DWithin(d.geom, o.geom, 15000)
+            ORDER BY ST_Distance(d.geom, o.geom)
+            LIMIT 1
+          ) nearest_stop ON true
+          LEFT JOIN LATERAL (
+            SELECT ST_Distance(d.geom, o.geom)::float8 AS distance_m
+            FROM city_objects o
+            WHERE o.type::text IN ('metro', 'station', 'hub', 'bus_station')
+              AND ST_DWithin(d.geom, o.geom, 20000)
+            ORDER BY ST_Distance(d.geom, o.geom)
+            LIMIT 1
+          ) nearest_hub ON true
+          LEFT JOIN LATERAL (
+            SELECT COUNT(*)::float8 AS poi_density
+            FROM city_objects o
+            WHERE o.type::text IN ('school', 'mall', 'hospital', 'university')
+              AND ST_DWithin(d.geom, o.geom, 5000)
+          ) poi ON true
+          LEFT JOIN LATERAL (
+            SELECT COUNT(*)::float8 AS important_count
+            FROM city_objects o
+            WHERE o.type::text IN ('school', 'hospital', 'university', 'station')
+              AND ST_DWithin(d.geom, o.geom, 7000)
+          ) important ON true
         ),
         scored AS (
           SELECT
