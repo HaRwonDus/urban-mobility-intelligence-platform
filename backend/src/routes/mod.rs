@@ -1,4 +1,5 @@
 pub mod accessibility;
+pub mod air_quality;
 pub mod districts;
 pub mod health;
 pub mod objects;

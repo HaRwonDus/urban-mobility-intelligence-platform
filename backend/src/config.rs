@@ -6,6 +6,7 @@ pub struct Config {
     pub api_addr: SocketAddr,
     pub database_url: String,
     pub dgis_api_key: String,
+    pub iqair_api_key: Option<String>,
 }
 
 impl Config {
@@ -19,6 +20,9 @@ impl Config {
             api_addr,
             database_url: env::var("DATABASE_URL").context("DATABASE_URL is required")?,
             dgis_api_key: env::var("DGIS_API_KEY").unwrap_or_else(|_| "replace_me".to_string()),
+            iqair_api_key: env::var("IQAIR_API_KEY")
+                .ok()
+                .filter(|value| !value.trim().is_empty() && value != "replace_me"),
         })
     }
 }

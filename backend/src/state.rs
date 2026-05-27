@@ -1,4 +1,7 @@
-use crate::{config::Config, services::dgis::DgisClient};
+use crate::{
+    config::Config,
+    services::{dgis::DgisClient, iqair::IqAirClient},
+};
 use anyhow::Context;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
@@ -6,6 +9,7 @@ use sqlx::{postgres::PgPoolOptions, PgPool};
 pub struct AppState {
     pub db: PgPool,
     pub dgis: DgisClient,
+    pub iqair: IqAirClient,
 }
 
 impl AppState {
@@ -17,7 +21,8 @@ impl AppState {
             .context("failed to connect to PostgreSQL")?;
 
         let dgis = DgisClient::new(config.dgis_api_key.clone());
+        let iqair = IqAirClient::new(config.iqair_api_key.clone());
 
-        Ok(Self { db, dgis })
+        Ok(Self { db, dgis, iqair })
     }
 }
