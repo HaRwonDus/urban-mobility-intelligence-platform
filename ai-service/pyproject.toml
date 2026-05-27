@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "urban-mobility-ai-service"
+version = "0.1.0"
+description = "FastAPI AI recommendation service for urban mobility analytics."
+authors = ["Urban Mobility Team"]
+readme = "../README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "0.115.6"
+uvicorn = { version = "0.34.0", extras = ["standard"] }
+pydantic = "2.10.4"
+scikit-learn = "1.6.0"
+numpy = "2.2.1"
+pandas = "2.2.3"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
