@@ -11,6 +11,7 @@ DO $$ BEGIN
     'station',
     'hub',
     'bus_station',
+    'airport',
     'university',
     'district'
   );
@@ -20,6 +21,7 @@ END $$;
 
 ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'metro';
 ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'bus_station';
+ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'airport';
 ALTER TYPE city_object_type ADD VALUE IF NOT EXISTS 'university';
 
 CREATE TABLE IF NOT EXISTS districts (
@@ -168,3 +170,60 @@ ON CONFLICT (slug) DO UPDATE SET
 UPDATE districts
 SET boundary = ST_Buffer(geom, 5500)::geometry
 WHERE boundary IS NULL;
+
+INSERT INTO city_objects (external_id, name, type, lat, lon, address, source, raw)
+VALUES
+  (
+    'seed:airport:almaty-international',
+    'Almaty International Airport',
+    'airport',
+    43.3521,
+    77.0405,
+    'Mailin St, Almaty',
+    'seed',
+    '{"avg_daily_arrivals": 11500, "avg_daily_departures": 11600, "hub_role": "air gateway"}'::jsonb
+  ),
+  (
+    'seed:rail:almaty-1',
+    'Almaty-1 Railway Station',
+    'station',
+    43.3417,
+    76.9398,
+    'Almaty-1',
+    'seed',
+    '{"avg_daily_arrivals": 8200, "avg_daily_departures": 7900, "hub_role": "rail gateway"}'::jsonb
+  ),
+  (
+    'seed:rail:almaty-2',
+    'Almaty-2 Railway Station',
+    'station',
+    43.2638,
+    76.9455,
+    'Abylai Khan Ave',
+    'seed',
+    '{"avg_daily_arrivals": 9800, "avg_daily_departures": 10100, "hub_role": "rail gateway"}'::jsonb
+  ),
+  (
+    'seed:bus:sairan',
+    'Sairan Bus Station',
+    'bus_station',
+    43.2398,
+    76.8506,
+    'Tole Bi St',
+    'seed',
+    '{"avg_daily_arrivals": 4300, "avg_daily_departures": 4500, "hub_role": "regional bus gateway"}'::jsonb
+  )
+ON CONFLICT (source, external_id) DO UPDATE SET
+  name = EXCLUDED.name,
+  type = EXCLUDED.type,
+  lat = EXCLUDED.lat,
+  lon = EXCLUDED.lon,
+  address = EXCLUDED.address,
+  raw = EXCLUDED.raw,
+  updated_at = now();
+
+INSERT INTO transport_stops (city_object_id, stop_kind, route_count)
+SELECT id, type::text, 0
+FROM city_objects
+WHERE type::text IN ('airport', 'station', 'bus_station')
+ON CONFLICT (city_object_id) DO UPDATE SET stop_kind = EXCLUDED.stop_kind;

@@ -31,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(routes::objects::router())
         .merge(routes::accessibility::router())
         .merge(routes::air_quality::router())
+        .merge(routes::hubs::router())
         .merge(routes::recommendations::router())
         .merge(routes::routes::router())
         .merge(routes::districts::router())

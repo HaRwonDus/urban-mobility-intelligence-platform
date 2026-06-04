@@ -6,13 +6,17 @@ import {
   ArrowRight,
   BusFront,
   Building2,
+  CircleDot,
   GitCompare,
   Gauge,
   Layers,
   MapPin,
+  Plane,
+  PlusCircle,
   Route,
   Shuffle,
   Sparkles,
+  TrainFront,
   Wind,
 } from 'lucide-react';
 import './styles.css';
@@ -203,6 +207,111 @@ const fallbackAirQuality = [
   },
 ];
 
+const fallbackTraffic = [
+  { id: 'traffic-nauryzbay', corridor: 'Nauryzbay main corridor', district: 'Nauryzbay', congestion_index: 0.72, average_speed_kmh: 25, delay_min: 13, source: 'estimated fallback' },
+  { id: 'traffic-alatau', corridor: 'Alatau main corridor', district: 'Alatau', congestion_index: 0.68, average_speed_kmh: 27, delay_min: 12, source: 'estimated fallback' },
+  { id: 'traffic-auezovsky', corridor: 'Auezovsky main corridor', district: 'Auezovsky', congestion_index: 0.54, average_speed_kmh: 31, delay_min: 10, source: 'estimated fallback' },
+];
+
+const fallbackVehicles = [
+  { id: 'veh-01', route_id: 'R-01', route_name: 'Nauryzbay to Almalinsky express', transport_type: 'express bus / BRT feeder', lat: 43.221, lon: 76.842, occupancy: 71, delay_min: 4 },
+  { id: 'veh-02', route_id: 'R-02', route_name: 'Alatau to Bostandyk connector', transport_type: 'express bus', lat: 43.266, lon: 76.866, occupancy: 65, delay_min: 5 },
+  { id: 'veh-03', route_id: 'R-03', route_name: 'Turksib to Medeu express', transport_type: 'express bus', lat: 43.286, lon: 76.991, occupancy: 79, delay_min: 6 },
+];
+
+const fallbackRouteAnalysis = {
+  route_name: 'Pilot public transport route',
+  transport_type: 'bus',
+  total_distance_km: 14.8,
+  estimated_duration_min: 58,
+  city_need: {
+    score: 76,
+    level: 'high',
+    summary: 'Route is strongly justified for underserved districts',
+    signals: ['Average accessibility score on corridor: 46', 'Average time to transfer hub: 23 min', 'Estimated covered population: 690000'],
+  },
+  duplication: {
+    score: 38,
+    level: 'low',
+    summary: 'Low duplication, the line covers a distinct corridor',
+    signals: ['Route overlap index: 0.38', 'Existing vehicles near corridor: 2', 'Districts crossed: Nauryzbay, Auezovsky, Almalinsky'],
+  },
+  overload_risk: {
+    score: 61,
+    level: 'medium',
+    summary: 'Moderate overload risk during peaks',
+    signals: ['Estimated demand: 1110 pax/hour', 'Planned capacity: 1020 pax/hour', 'Traffic pressure index: 0.55'],
+  },
+  recommendation: 'Approve for scenario modelling, then refine the corridor using live traffic and AVL data.',
+  confidence: 0.74,
+  data_sources: ['PostGIS district accessibility metrics', 'Traffic API layer', 'Public transport geolocation API layer'],
+};
+
+const fallbackHubs = [
+  {
+    id: 'airport',
+    name: 'Almaty International Airport',
+    hub_type: 'airport',
+    lat: 43.3521,
+    lon: 77.0405,
+    avg_daily_arrivals: 11500,
+    avg_daily_departures: 11600,
+    avg_daily_flow: 23100,
+    nearest_district: 'Turksib',
+    access_time_min: 17,
+    pressure_index: 82,
+    recommendation: 'Add express airport transit and protect peak-hour bus priority.',
+  },
+  {
+    id: 'almaty-2',
+    name: 'Almaty-2 Railway Station',
+    hub_type: 'station',
+    lat: 43.2638,
+    lon: 76.9455,
+    avg_daily_arrivals: 9800,
+    avg_daily_departures: 10100,
+    avg_daily_flow: 19900,
+    nearest_district: 'Almalinsky',
+    access_time_min: 9,
+    pressure_index: 65,
+    recommendation: 'Monitor peak flows and improve first/last-mile coverage.',
+  },
+  {
+    id: 'almaty-1',
+    name: 'Almaty-1 Railway Station',
+    hub_type: 'station',
+    lat: 43.3417,
+    lon: 76.9398,
+    avg_daily_arrivals: 8200,
+    avg_daily_departures: 7900,
+    avg_daily_flow: 16100,
+    nearest_district: 'Turksib',
+    access_time_min: 14,
+    pressure_index: 68,
+    recommendation: 'Add feeder routes, park-and-ride capacity and dedicated transfer stops.',
+  },
+];
+
+const fallbackCoverageGaps = [
+  { id: 'nauryzbay', district: 'Nauryzbay', lat: 43.1972, lon: 76.7825, severity: 'high', isolation_score: 82, reason: '19 min to stop, 27 min to intermodal hub' },
+  { id: 'alatau', district: 'Alatau', lat: 43.3006, lon: 76.8287, severity: 'high', isolation_score: 76, reason: '18 min to stop, 26 min to intermodal hub' },
+  { id: 'turksib', district: 'Turksib', lat: 43.3335, lon: 76.987, severity: 'medium', isolation_score: 61, reason: '16 min to stop, 24 min to intermodal hub' },
+];
+
+const fallbackHubProposal = {
+  name: 'Proposed station',
+  hub_type: 'station',
+  lat: 43.3006,
+  lon: 76.8287,
+  nearest_district: 'Alatau',
+  underserved_score: 78,
+  network_fit_score: 74,
+  duplicate_pressure: 18,
+  estimated_daily_flow: 13200,
+  verdict: 'Strong candidate for a new intermodal hub scenario.',
+  signals: ['Nearest district: Alatau', 'District accessibility score: 39', 'Time to existing hub: 26 min', 'Nearest same-type hub: 11.8 km'],
+};
+
 const DISTRICT_I18N = {
   Almalinsky: { ru: 'Алмалинский', kz: 'Алмалы' },
   Auezovsky: { ru: 'Ауэзовский', kz: 'Әуезов' },
@@ -227,6 +336,7 @@ const UI_TEXT = {
     sync: 'Обновить 2GIS',
     accessibility: 'Доступность',
     airQuality: 'Качество воздуха',
+    coverageGaps: 'Отрезанные районы',
     mapMissing: 'Ключ MapGL не найден',
     accessibilityShort: 'доступность',
     toStop: 'До остановки',
@@ -250,6 +360,29 @@ const UI_TEXT = {
     toDistrict: 'В район',
     intervention: 'Мера',
     runSelectedPair: 'Запустить пару',
+    routeBuilder: 'Конструктор маршрута ОТ',
+    routePointMap: 'Карта точек маршрута',
+    mapRoutePicker: 'Поставьте точку',
+    routePoint: 'Точка',
+    setPoint: 'Ставим',
+    resetPoints: 'Сбросить точки',
+    routeName: 'Название маршрута',
+    viaDistrict: 'Через район',
+    transportType: 'Тип ОТ',
+    frequency: 'Интервал',
+    vehicles: 'Машин на линии',
+    analyzeRoute: 'Проанализировать маршрут',
+    aiRouteVerdict: 'AI-оценка маршрута',
+    cityNeed: 'Нужность городу',
+    duplicationRisk: 'Дублирование',
+    overloadRisk: 'Риск перегруза',
+    trafficApi: 'API трафика',
+    vehicleApi: 'Геопозиция ОТ',
+    avgSpeed: 'средняя скорость',
+    delay: 'задержка',
+    occupancy: 'загрузка',
+    duration: 'время',
+    distance: 'длина',
     badConnections: 'Слабые связи',
     suggestion: 'Предложение',
     suggestedRoutes: 'Предложенные линии',
@@ -267,6 +400,20 @@ const UI_TEXT = {
     poi: 'POI',
     priority: 'Приоритет',
     airLayer: 'Слой качества воздуха',
+    intercityHubs: 'Аэропорт и ЖД хабы',
+    arrivals: 'прибытие',
+    departures: 'убытие',
+    dailyFlow: 'пассажиров/день',
+    hubPressure: 'нагрузка хаба',
+    proposedHub: 'Предложение хаба',
+    proposalType: 'Тип хаба',
+    useSelectedPoint: 'Взять выбранную точку',
+    analyzeHub: 'Оценить хаб',
+    networkMode: 'Сценарий сети',
+    existingNetwork: 'существующая сеть',
+    greenfieldNetwork: 'проект с нуля',
+    cutOffDistricts: 'Красные точки покрытия',
+    isolation: 'изоляция',
     highestAqi: (name) => `${name} показывает самый высокий AQI на текущем слое карты.`,
     forecastTitle: 'Сценарная аналитика инфраструктуры',
     forecastLead: 'Forecast лучше делать как симулятор решений: что будет без изменений, после хабов, после усиления ОТ и после экологичных коридоров.',
@@ -296,6 +443,7 @@ const UI_TEXT = {
     sync: '2GIS жаңарту',
     accessibility: 'Қолжетімділік',
     airQuality: 'Ауа сапасы',
+    coverageGaps: 'Оқшау аудандар',
     mapMissing: 'MapGL кілті табылмады',
     accessibilityShort: 'қолжетімділік',
     toStop: 'Аялдамаға',
@@ -319,6 +467,29 @@ const UI_TEXT = {
     toDistrict: 'Қай ауданға',
     intervention: 'Шара',
     runSelectedPair: 'Жұпты іске қосу',
+    routeBuilder: 'ОТ бағытын құрастыру',
+    routePointMap: 'Бағыт нүктелерінің картасы',
+    mapRoutePicker: 'Нүктені қойыңыз',
+    routePoint: 'Нүкте',
+    setPoint: 'Қою',
+    resetPoints: 'Нүктелерді тазарту',
+    routeName: 'Бағыт атауы',
+    viaDistrict: 'Аралық аудан',
+    transportType: 'ОТ түрі',
+    frequency: 'Интервал',
+    vehicles: 'Желідегі көлік',
+    analyzeRoute: 'Бағытты талдау',
+    aiRouteVerdict: 'AI бағыт бағасы',
+    cityNeed: 'Қалаға қажеттілік',
+    duplicationRisk: 'Қайталану',
+    overloadRisk: 'Артық жүктеме қаупі',
+    trafficApi: 'Трафик API',
+    vehicleApi: 'ОТ геопозициясы',
+    avgSpeed: 'орташа жылдамдық',
+    delay: 'кешігу',
+    occupancy: 'жүктеме',
+    duration: 'уақыт',
+    distance: 'ұзындығы',
     badConnections: 'Әлсіз байланыстар',
     suggestion: 'Ұсыныс',
     suggestedRoutes: 'Ұсынылған желілер',
@@ -336,6 +507,20 @@ const UI_TEXT = {
     poi: 'POI',
     priority: 'Басымдық',
     airLayer: 'Ауа сапасы қабаты',
+    intercityHubs: 'Әуежай және ЖД хабтары',
+    arrivals: 'келу',
+    departures: 'кету',
+    dailyFlow: 'жолаушы/күн',
+    hubPressure: 'хаб жүктемесі',
+    proposedHub: 'Хаб ұсынысы',
+    proposalType: 'Хаб түрі',
+    useSelectedPoint: 'Таңдалған нүктені алу',
+    analyzeHub: 'Хабты бағалау',
+    networkMode: 'Желі сценарийі',
+    existingNetwork: 'қазіргі желі',
+    greenfieldNetwork: 'нөлден жоба',
+    cutOffDistricts: 'Қызыл қамту нүктелері',
+    isolation: 'оқшаулау',
     highestAqi: (name) => `${name} ағымдағы карта қабатында ең жоғары AQI көрсетеді.`,
     forecastTitle: 'Инфрақұрылым сценарийлері',
     forecastLead: 'Forecast шешім симуляторы болуы керек: өзгеріссіз, хабтармен, ОТ күшейтуімен және экологиялық дәліздермен не өзгереді.',
@@ -474,6 +659,22 @@ function normalizeDistrict(district, score) {
   };
 }
 
+function createRouteStopsFromDistricts(districts) {
+  const find = (name, fallbackIndex) => districts.find((district) => district.name === name) || districts[fallbackIndex] || fallbackDistricts[fallbackIndex];
+  const points = [
+    ['A', find('Nauryzbay', 3)],
+    ['B', find('Auezovsky', 1)],
+    ['C', find('Almalinsky', 0)],
+  ];
+
+  return points.map(([label, district]) => ({
+    label,
+    name: `${label}: ${district.name}`,
+    lat: district.lat,
+    lon: district.lon,
+  }));
+}
+
 function loadMapglScript() {
   if (window.mapgl) return Promise.resolve(window.mapgl);
 
@@ -496,7 +697,19 @@ function loadMapglScript() {
   });
 }
 
-function MapPanel({ districts, airQuality, selected, mapMode, lang, onSelect }) {
+function MapPanel({
+  districts,
+  airQuality,
+  coverageGaps,
+  selected,
+  mapMode,
+  lang,
+  onSelect,
+  routeStops = [],
+  activeRoutePointIndex = 0,
+  onRoutePointSelect,
+  routePickMode = false,
+}) {
   const mapNode = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
@@ -535,20 +748,28 @@ function MapPanel({ districts, airQuality, selected, mapMode, lang, onSelect }) 
   useEffect(() => {
     if (!mapRef.current || !mapApi) return;
     markersRef.current.forEach((marker) => marker.destroy?.());
-    const points = mapMode === 'air' ? airQuality : districts;
+    const points = mapMode === 'air' ? airQuality : mapMode === 'coverage' ? coverageGaps : districts;
     markersRef.current = points.map((point) => {
       const district = mapMode === 'air'
         ? districts.find((item) => item.name === point.district) || point
+        : mapMode === 'coverage'
+          ? districts.find((item) => item.name === point.district) || point
         : point;
       const html = document.createElement('button');
-      const value = mapMode === 'air' ? point.aqi_us : district.score;
-      const markerClass = mapMode === 'air' ? airClass(point.aqi_us) : scoreClass(district.score);
+      const value = mapMode === 'air' ? point.aqi_us : mapMode === 'coverage' ? point.isolation_score : district.score;
+      const markerClass = mapMode === 'air'
+        ? airClass(point.aqi_us)
+        : mapMode === 'coverage'
+          ? 'coverage-bad'
+          : scoreClass(district.score);
       html.className = `map-heat ${markerClass} ${
         selected?.id === district.id ? 'focus' : ''
       }`;
       html.textContent = String(value);
       html.title = mapMode === 'air'
         ? `${districtLabel(point.district, lang)} AQI ${point.aqi_us}`
+        : mapMode === 'coverage'
+          ? `${districtLabel(point.district, lang)} ${tt(lang, 'isolation')} ${point.isolation_score}`
         : districtLabel(district.name, lang);
       html.addEventListener('click', () => onSelect(district));
 
@@ -558,7 +779,41 @@ function MapPanel({ districts, airQuality, selected, mapMode, lang, onSelect }) 
         anchor: [32, 32],
       });
     });
-  }, [districts, airQuality, selected?.id, mapMode, onSelect, mapApi]);
+
+    const routeMarkers = routeStops.map((stop, index) => {
+      const html = document.createElement('button');
+      html.className = `route-point-marker ${index === activeRoutePointIndex ? 'active' : ''}`;
+      html.textContent = stop.label;
+      html.title = `${stop.label}: ${stop.name}`;
+      html.addEventListener('click', (event) => {
+        event.stopPropagation();
+        onRoutePointSelect?.({ lat: stop.lat, lon: stop.lon }, index);
+      });
+
+      return new mapApi.HtmlMarker(mapRef.current, {
+        coordinates: [stop.lon, stop.lat],
+        html,
+        anchor: [22, 22],
+      });
+    });
+
+    markersRef.current = [...markersRef.current, ...routeMarkers];
+  }, [districts, airQuality, coverageGaps, selected?.id, mapMode, onSelect, mapApi, routeStops, activeRoutePointIndex, onRoutePointSelect]);
+
+  useEffect(() => {
+    if (!mapRef.current || !routePickMode || !onRoutePointSelect) return undefined;
+    const handler = (event) => {
+      const raw = event?.lngLat || event?.coordinates || event?.targetData?.coordinates;
+      const lon = Array.isArray(raw) ? raw[0] : raw?.lng ?? raw?.lon;
+      const lat = Array.isArray(raw) ? raw[1] : raw?.lat;
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        onRoutePointSelect({ lat, lon }, activeRoutePointIndex);
+      }
+    };
+
+    mapRef.current.on?.('click', handler);
+    return () => mapRef.current?.off?.('click', handler);
+  }, [routePickMode, activeRoutePointIndex, onRoutePointSelect, mapApi]);
 
   useEffect(() => {
     if (mapRef.current && selected) {
@@ -571,14 +826,34 @@ function MapPanel({ districts, airQuality, selected, mapMode, lang, onSelect }) 
       <div ref={mapNode} className="map-surface real-map">
         {!mapKey && <div className="map-error">{tt(lang, 'mapMissing')}</div>}
       </div>
-      <div className="map-label">2GIS MapGL</div>
+      <div className="map-label">{routePickMode ? `${tt(lang, 'mapRoutePicker')} ${routeStops[activeRoutePointIndex]?.label || 'A'}` : '2GIS MapGL'}</div>
     </section>
   );
 }
 
-function RoutesView({ routes, districts, simulation, routeDraft, setRouteDraft, onSimulate, isSimulating, lang }) {
+function RoutesView({
+  routes,
+  districts,
+  simulation,
+  routeDraft,
+  setRouteDraft,
+  onSimulate,
+  isSimulating,
+  analysis,
+  onAnalyze,
+  isAnalyzing,
+  traffic,
+  vehicles,
+  activeRoutePointIndex,
+  setActiveRoutePointIndex,
+  onRoutePointSelect,
+  onResetRoutePoints,
+  lang,
+}) {
   const topGap = routes.gaps?.[0];
   const districtNames = districts.map((district) => district.name);
+  const topTraffic = [...traffic].sort((a, b) => b.congestion_index - a.congestion_index).slice(0, 3);
+  const activeVehicles = vehicles.slice(0, 3);
 
   return (
     <div className="routes-layout">
@@ -635,6 +910,168 @@ function RoutesView({ routes, districts, simulation, routeDraft, setRouteDraft, 
         <button className="primary" onClick={() => onSimulate(routeDraft)} disabled={isSimulating}>
           <Sparkles size={18} /> {tt(lang, 'runSelectedPair')}
         </button>
+      </section>
+
+      <section className="route-builder-panel">
+        <div className="builder-header">
+          <div>
+            <span className="eyebrow">{tt(lang, 'routeBuilder')}</span>
+            <h3>{routeDraft.name}</h3>
+          </div>
+          <button className="primary" onClick={() => onAnalyze(routeDraft)} disabled={isAnalyzing}>
+            <Sparkles size={18} /> {isAnalyzing ? tt(lang, 'syncing') : tt(lang, 'analyzeRoute')}
+          </button>
+        </div>
+
+        <div className="builder-grid">
+          <label>
+            <span>{tt(lang, 'routeName')}</span>
+            <input
+              value={routeDraft.name}
+              onChange={(event) => setRouteDraft((current) => ({ ...current, name: event.target.value }))}
+            />
+          </label>
+          <label>
+            <span>{tt(lang, 'viaDistrict')}</span>
+            <select
+              value={routeDraft.via}
+              onChange={(event) => setRouteDraft((current) => ({ ...current, via: event.target.value }))}
+            >
+              {districtNames.map((name) => <option key={name} value={name}>{districtLabel(name, lang)}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>{tt(lang, 'transportType')}</span>
+            <select
+              value={routeDraft.transport_type}
+              onChange={(event) => setRouteDraft((current) => ({ ...current, transport_type: event.target.value }))}
+            >
+              <option value="bus">Bus</option>
+              <option value="brt">BRT</option>
+              <option value="trolleybus">Trolleybus</option>
+              <option value="tram">Tram</option>
+            </select>
+          </label>
+          <label>
+            <span>{tt(lang, 'frequency')}</span>
+            <input
+              type="number"
+              min="3"
+              max="45"
+              value={routeDraft.frequency_min}
+              onChange={(event) => setRouteDraft((current) => ({ ...current, frequency_min: Number(event.target.value) }))}
+            />
+          </label>
+          <label>
+            <span>{tt(lang, 'vehicles')}</span>
+            <input
+              type="number"
+              min="1"
+              max="80"
+              value={routeDraft.planned_vehicles}
+              onChange={(event) => setRouteDraft((current) => ({ ...current, planned_vehicles: Number(event.target.value) }))}
+            />
+          </label>
+          <label>
+            <span>{tt(lang, 'networkMode')}</span>
+            <select
+              value={routeDraft.greenfield ? 'greenfield' : 'existing'}
+              onChange={(event) => setRouteDraft((current) => ({ ...current, greenfield: event.target.value === 'greenfield' }))}
+            >
+              <option value="existing">{tt(lang, 'existingNetwork')}</option>
+              <option value="greenfield">{tt(lang, 'greenfieldNetwork')}</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section className="route-point-workbench">
+        <div className="route-panel route-map-panel">
+          <div className="builder-header">
+            <div>
+              <span className="eyebrow">{tt(lang, 'routePointMap')}</span>
+              <h3>{tt(lang, 'setPoint')} {routeDraft.stops[activeRoutePointIndex]?.label}</h3>
+            </div>
+            <button className="secondary" onClick={onResetRoutePoints}>
+              <MapPin size={17} /> {tt(lang, 'resetPoints')}
+            </button>
+          </div>
+          <MapPanel
+            districts={districts}
+            airQuality={[]}
+            coverageGaps={[]}
+            selected={null}
+            mapMode="accessibility"
+            lang={lang}
+            onSelect={(district) => onRoutePointSelect({ lat: district.lat, lon: district.lon }, activeRoutePointIndex)}
+            routeStops={routeDraft.stops}
+            activeRoutePointIndex={activeRoutePointIndex}
+            onRoutePointSelect={onRoutePointSelect}
+            routePickMode
+          />
+        </div>
+
+        <div className="route-panel route-stop-panel">
+          <h3><MapPin size={18} /> {tt(lang, 'routePoint')}</h3>
+          <div className="route-stop-list">
+            {routeDraft.stops.map((stop, index) => (
+              <button
+                key={stop.label}
+                className={index === activeRoutePointIndex ? 'active' : ''}
+                onClick={() => setActiveRoutePointIndex(index)}
+              >
+                <strong>{stop.label}</strong>
+                <span>{stop.name}</span>
+                <small>{stop.lat.toFixed(4)}, {stop.lon.toFixed(4)}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="analysis-grid">
+        <div className="route-panel analysis-panel">
+          <h3><Sparkles size={18} /> {tt(lang, 'aiRouteVerdict')}</h3>
+          <div className="analysis-summary">
+            <strong>{analysis.route_name}</strong>
+            <span>{tt(lang, 'distance')}: {analysis.total_distance_km} km</span>
+            <span>{tt(lang, 'duration')}: {analysis.estimated_duration_min} min</span>
+            <p>{analysis.recommendation}</p>
+          </div>
+          <div className="criteria-grid">
+            <AnalysisScoreCard title={tt(lang, 'cityNeed')} criterion={analysis.city_need} />
+            <AnalysisScoreCard title={tt(lang, 'duplicationRisk')} criterion={analysis.duplication} />
+            <AnalysisScoreCard title={tt(lang, 'overloadRisk')} criterion={analysis.overload_risk} />
+          </div>
+        </div>
+
+        <div className="route-panel live-data-panel">
+          <h3><Gauge size={18} /> {tt(lang, 'trafficApi')}</h3>
+          {topTraffic.map((item) => (
+            <div key={item.id} className="live-row">
+              <div>
+                <b>{districtLabel(item.district, lang)}</b>
+                <span>{item.corridor}</span>
+              </div>
+              <strong>{Math.round(item.congestion_index * 100)}%</strong>
+              <small>{item.average_speed_kmh} km/h, {item.delay_min} min {tt(lang, 'delay')}</small>
+            </div>
+          ))}
+        </div>
+
+        <div className="route-panel live-data-panel">
+          <h3><BusFront size={18} /> {tt(lang, 'vehicleApi')}</h3>
+          {activeVehicles.map((item) => (
+            <div key={item.id} className="live-row">
+              <div>
+                <b>{item.route_id}</b>
+                <span>{item.route_name}</span>
+              </div>
+              <strong>{item.occupancy}%</strong>
+              <small>{tt(lang, 'occupancy')}, {item.delay_min} min {tt(lang, 'delay')}</small>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="routes-grid">
@@ -732,6 +1169,21 @@ function RoutesView({ routes, districts, simulation, routeDraft, setRouteDraft, 
   );
 }
 
+function AnalysisScoreCard({ title, criterion }) {
+  return (
+    <article className={`criterion-card ${criterion.level}`}>
+      <div>
+        <span>{title}</span>
+        <strong>{criterion.score}</strong>
+      </div>
+      <p>{criterion.summary}</p>
+      <ul>
+        {criterion.signals.slice(0, 3).map((signal) => <li key={signal}>{signal}</li>)}
+      </ul>
+    </article>
+  );
+}
+
 function AirQualityPanel({ airQuality, lang }) {
   const sorted = [...airQuality].sort((a, b) => b.aqi_us - a.aqi_us);
   const worst = sorted[0];
@@ -755,6 +1207,100 @@ function AirQualityPanel({ airQuality, lang }) {
         ))}
       </div>
       <small>{worst?.source || 'IQAir AirVisual API ready'}</small>
+    </section>
+  );
+}
+
+function HubsPanel({ hubs, lang }) {
+  return (
+    <section className="hub-panel">
+      <div>
+        <h3><TrainFront size={18} /> {tt(lang, 'intercityHubs')}</h3>
+        <p>{tt(lang, 'dailyFlow')} и {tt(lang, 'hubPressure')} для ключевых внешних ворот города.</p>
+      </div>
+      <div className="hub-grid">
+        {hubs.slice(0, 4).map((hub) => (
+          <article key={hub.id} className="hub-card">
+            <div>
+              {hub.hub_type === 'airport' ? <Plane size={19} /> : <TrainFront size={19} />}
+              <span>{hub.hub_type}</span>
+            </div>
+            <h4>{hub.name}</h4>
+            <dl>
+              <div><dt>{tt(lang, 'arrivals')}</dt><dd>{hub.avg_daily_arrivals}</dd></div>
+              <div><dt>{tt(lang, 'departures')}</dt><dd>{hub.avg_daily_departures}</dd></div>
+              <div><dt>{tt(lang, 'hubPressure')}</dt><dd>{hub.pressure_index}</dd></div>
+            </dl>
+            <p>{hub.recommendation}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HubProposalPanel({ proposal, setProposal, analysis, selected, onUseSelected, onAnalyze, isAnalyzing, lang }) {
+  return (
+    <section className="hub-proposal-panel">
+      <div className="builder-header">
+        <div>
+          <span className="eyebrow">{tt(lang, 'proposedHub')}</span>
+          <h3>{analysis.name}</h3>
+        </div>
+        <button className="primary" onClick={onAnalyze} disabled={isAnalyzing}>
+          <PlusCircle size={18} /> {isAnalyzing ? tt(lang, 'syncing') : tt(lang, 'analyzeHub')}
+        </button>
+      </div>
+      <div className="proposal-grid">
+        <label>
+          <span>{tt(lang, 'routeName')}</span>
+          <input value={proposal.name} onChange={(event) => setProposal((current) => ({ ...current, name: event.target.value }))} />
+        </label>
+        <label>
+          <span>{tt(lang, 'proposalType')}</span>
+          <select value={proposal.hub_type} onChange={(event) => setProposal((current) => ({ ...current, hub_type: event.target.value }))}>
+            <option value="station">ЖД вокзал</option>
+            <option value="bus_station">Автовокзал</option>
+          </select>
+        </label>
+        <label>
+          <span>Lat</span>
+          <input type="number" step="0.0001" value={proposal.lat} onChange={(event) => setProposal((current) => ({ ...current, lat: Number(event.target.value) }))} />
+        </label>
+        <label>
+          <span>Lon</span>
+          <input type="number" step="0.0001" value={proposal.lon} onChange={(event) => setProposal((current) => ({ ...current, lon: Number(event.target.value) }))} />
+        </label>
+        <button className="secondary" onClick={onUseSelected}>
+          <CircleDot size={17} /> {tt(lang, 'useSelectedPoint')}
+        </button>
+      </div>
+      <div className="proposal-result">
+        <strong>{analysis.network_fit_score}</strong>
+        <div>
+          <b>{districtLabel(analysis.nearest_district, lang)}</b>
+          <p>{analysis.verdict}</p>
+          <span>{tt(lang, 'isolation')}: {analysis.underserved_score}, {tt(lang, 'duplicatedCoverage')}: {analysis.duplicate_pressure}, flow: {analysis.estimated_daily_flow}</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CoverageGapPanel({ coverageGaps, lang }) {
+  return (
+    <section className="coverage-panel">
+      <h3><AlertTriangle size={18} /> {tt(lang, 'cutOffDistricts')}</h3>
+      <div className="coverage-grid">
+        {coverageGaps.map((gap) => (
+          <article key={gap.id} className="coverage-card">
+            <span className={`priority ${gap.severity}`}>{priorityLabel(gap.severity, lang)}</span>
+            <h4>{districtLabel(gap.district, lang)}</h4>
+            <strong>{gap.isolation_score}</strong>
+            <p>{gap.reason}</p>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -911,11 +1457,32 @@ function App() {
   const [mapMode, setMapMode] = useState('accessibility');
   const [routes, setRoutes] = useState(fallbackRoutes);
   const [airQuality, setAirQuality] = useState(fallbackAirQuality);
+  const [hubs, setHubs] = useState(fallbackHubs);
+  const [coverageGaps, setCoverageGaps] = useState(fallbackCoverageGaps);
   const [routeDraft, setRouteDraft] = useState({
+    name: 'Pilot public transport route',
     origin: 'Nauryzbay',
+    via: 'Auezovsky',
     destination: 'Almalinsky',
     intervention: 'express feeder',
+    transport_type: 'bus',
+    frequency_min: 10,
+    planned_vehicles: 8,
+    greenfield: false,
+    stops: createRouteStopsFromDistricts(fallbackDistricts),
   });
+  const [hubProposal, setHubProposal] = useState({
+    name: 'Proposed Alatau rail hub',
+    hub_type: 'station',
+    lat: 43.3006,
+    lon: 76.8287,
+    daily_capacity: 14000,
+    greenfield: false,
+  });
+  const [hubProposalAnalysis, setHubProposalAnalysis] = useState(fallbackHubProposal);
+  const [traffic, setTraffic] = useState(fallbackTraffic);
+  const [vehicles, setVehicles] = useState(fallbackVehicles);
+  const [routeAnalysis, setRouteAnalysis] = useState(fallbackRouteAnalysis);
   const [routeSimulation, setRouteSimulation] = useState({
     origin: 'Nauryzbay',
     destination: 'Almalinsky',
@@ -927,6 +1494,9 @@ function App() {
     confidence: 0.78,
   });
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isAnalyzingRoute, setIsAnalyzingRoute] = useState(false);
+  const [isAnalyzingHub, setIsAnalyzingHub] = useState(false);
+  const [activeRoutePointIndex, setActiveRoutePointIndex] = useState(0);
 
   const avgScore = useMemo(
     () => Math.round(districts.reduce((sum, item) => sum + item.score, 0) / districts.length),
@@ -951,6 +1521,12 @@ function App() {
     if (loaded.length > 0) {
       setDistricts(loaded);
       setSelected((current) => loaded.find((item) => item.id === current?.id) || loaded[0]);
+      setRouteDraft((current) => ({
+        ...current,
+        stops: current.stops?.some((stop) => stop.name.startsWith('A: Nauryzbay'))
+          ? createRouteStopsFromDistricts(loaded)
+          : current.stops,
+      }));
     }
   }
 
@@ -985,6 +1561,155 @@ function App() {
     } catch {
       setAirQuality(fallbackAirQuality);
     }
+  }
+
+  async function loadMobilityLayers() {
+    try {
+      const [trafficResponse, vehiclesResponse] = await Promise.all([
+        fetch(`${apiUrl}/api/mobility/traffic`),
+        fetch(`${apiUrl}/api/mobility/public-transport/locations`),
+      ]);
+      if (trafficResponse.ok) {
+        const trafficData = await trafficResponse.json();
+        if (Array.isArray(trafficData) && trafficData.length > 0) setTraffic(trafficData);
+      }
+      if (vehiclesResponse.ok) {
+        const vehicleData = await vehiclesResponse.json();
+        if (Array.isArray(vehicleData) && vehicleData.length > 0) setVehicles(vehicleData);
+      }
+    } catch {
+      setTraffic(fallbackTraffic);
+      setVehicles(fallbackVehicles);
+    }
+  }
+
+  async function loadHubsAndCoverage() {
+    try {
+      const [hubsResponse, gapsResponse] = await Promise.all([
+        fetch(`${apiUrl}/api/hubs`),
+        fetch(`${apiUrl}/api/coverage/gaps`),
+      ]);
+      if (hubsResponse.ok) {
+        const data = await hubsResponse.json();
+        if (Array.isArray(data) && data.length > 0) setHubs(data);
+      }
+      if (gapsResponse.ok) {
+        const data = await gapsResponse.json();
+        if (Array.isArray(data) && data.length > 0) setCoverageGaps(data);
+      }
+    } catch {
+      setHubs(fallbackHubs);
+      setCoverageGaps(fallbackCoverageGaps);
+    }
+  }
+
+  function buildRouteStops(draft) {
+    if (draft.stops?.filter((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon)).length >= 2) {
+      return draft.stops
+        .filter((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lon))
+        .map((stop) => ({
+          name: stop.name,
+          lat: stop.lat,
+          lon: stop.lon,
+        }));
+    }
+
+    const byName = new Map(districts.map((district) => [district.name, district]));
+    return [draft.origin, draft.via, draft.destination]
+      .filter((name, index, items) => name && items.indexOf(name) === index)
+      .map((name) => byName.get(name))
+      .filter(Boolean)
+      .map((district) => ({
+        name: districtLabel(district.name, lang),
+        lat: district.lat,
+        lon: district.lon,
+      }));
+  }
+
+  function setRoutePoint(point, pointIndex = activeRoutePointIndex) {
+    setRouteDraft((current) => {
+      const currentStops = current.stops?.length ? current.stops : createRouteStopsFromDistricts(districts);
+      const nextStops = currentStops.map((stop, index) => {
+        if (index !== pointIndex) return stop;
+        const nearestDistrict = districts
+          .map((district) => ({
+            district,
+            distance: Math.hypot(district.lat - point.lat, district.lon - point.lon),
+          }))
+          .sort((a, b) => a.distance - b.distance)[0]?.district;
+        return {
+          ...stop,
+          name: `${stop.label}: ${nearestDistrict ? districtLabel(nearestDistrict.name, lang) : tt(lang, 'routePoint')}`,
+          lat: Number(point.lat.toFixed(6)),
+          lon: Number(point.lon.toFixed(6)),
+        };
+      });
+
+      return { ...current, stops: nextStops };
+    });
+    setActiveRoutePointIndex((current) => Math.min(pointIndex + 1, 2));
+  }
+
+  function resetRoutePoints() {
+    setRouteDraft((current) => ({
+      ...current,
+      stops: createRouteStopsFromDistricts(districts),
+    }));
+    setActiveRoutePointIndex(0);
+  }
+
+  async function analyzeRoute(draft) {
+    const stops = buildRouteStops(draft);
+    if (stops.length < 2) return;
+    setIsAnalyzingRoute(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/routes/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: draft.name,
+          transport_type: draft.transport_type,
+          stops,
+          frequency_min: draft.frequency_min,
+          planned_vehicles: draft.planned_vehicles,
+          greenfield: draft.greenfield,
+        }),
+      });
+      if (!response.ok) throw new Error('Route analysis failed');
+      setRouteAnalysis(await response.json());
+    } catch {
+      setRouteAnalysis(fallbackRouteAnalysis);
+    } finally {
+      setIsAnalyzingRoute(false);
+    }
+  }
+
+  async function analyzeHubProposal() {
+    setIsAnalyzingHub(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/hubs/proposals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hubProposal),
+      });
+      if (!response.ok) throw new Error('Hub analysis failed');
+      setHubProposalAnalysis(await response.json());
+    } catch {
+      setHubProposalAnalysis(fallbackHubProposal);
+    } finally {
+      setIsAnalyzingHub(false);
+    }
+  }
+
+  function useSelectedForHubProposal() {
+    if (!selected) return;
+    setHubProposal((current) => ({
+      ...current,
+      lat: Number(selected.lat.toFixed(4)),
+      lon: Number(selected.lon.toFixed(4)),
+      name: `${districtLabel(selected.name, lang)} ${current.hub_type === 'station' ? 'rail hub' : 'bus hub'}`,
+    }));
+    setMapMode('coverage');
   }
 
   async function simulateRoute(gap = routes.gaps[0]) {
@@ -1045,6 +1770,8 @@ function App() {
     loadRecommendations();
     loadRoutes();
     loadAirQuality();
+    loadMobilityLayers();
+    loadHubsAndCoverage();
   }, []);
 
   return (
@@ -1111,12 +1838,16 @@ function App() {
               <button className={mapMode === 'air' ? 'active' : ''} onClick={() => setMapMode('air')}>
                 <Wind size={17} /> {tt(lang, 'airQuality')}
               </button>
+              <button className={mapMode === 'coverage' ? 'active' : ''} onClick={() => setMapMode('coverage')}>
+                <AlertTriangle size={17} /> {tt(lang, 'coverageGaps')}
+              </button>
             </section>
 
             <div className="content-grid">
               <MapPanel
                 districts={districts}
                 airQuality={airQuality}
+                coverageGaps={coverageGaps}
                 selected={selected}
                 mapMode={mapMode}
                 lang={lang}
@@ -1156,6 +1887,20 @@ function App() {
             </div>
 
             {mapMode === 'air' && <AirQualityPanel airQuality={airQuality} lang={lang} />}
+            {mapMode === 'coverage' && <CoverageGapPanel coverageGaps={coverageGaps} lang={lang} />}
+
+            <HubsPanel hubs={hubs} lang={lang} />
+
+            <HubProposalPanel
+              proposal={hubProposal}
+              setProposal={setHubProposal}
+              analysis={hubProposalAnalysis}
+              selected={selected}
+              onUseSelected={useSelectedForHubProposal}
+              onAnalyze={analyzeHubProposal}
+              isAnalyzing={isAnalyzingHub}
+              lang={lang}
+            />
 
             <section className="recommendations">
               <h3><AlertTriangle size={18} /> {tt(lang, 'aiRecommendations')}</h3>
@@ -1182,6 +1927,15 @@ function App() {
             setRouteDraft={setRouteDraft}
             onSimulate={simulateRoute}
             isSimulating={isSimulating}
+            analysis={routeAnalysis}
+            onAnalyze={analyzeRoute}
+            isAnalyzing={isAnalyzingRoute}
+            traffic={traffic}
+            vehicles={vehicles}
+            activeRoutePointIndex={activeRoutePointIndex}
+            setActiveRoutePointIndex={setActiveRoutePointIndex}
+            onRoutePointSelect={setRoutePoint}
+            onResetRoutePoints={resetRoutePoints}
             lang={lang}
           />
         )}

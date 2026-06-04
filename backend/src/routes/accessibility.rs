@@ -111,7 +111,7 @@ async fn recalculate_accessibility(
           LEFT JOIN LATERAL (
             SELECT ST_Distance(d.geom, o.geom)::float8 AS distance_m
             FROM city_objects o
-            WHERE o.type::text IN ('stop', 'metro', 'station', 'hub', 'bus_station')
+            WHERE o.type::text IN ('stop', 'metro', 'station', 'hub', 'bus_station', 'airport')
               AND ST_DWithin(d.geom, o.geom, 15000)
             ORDER BY ST_Distance(d.geom, o.geom)
             LIMIT 1
@@ -119,7 +119,7 @@ async fn recalculate_accessibility(
           LEFT JOIN LATERAL (
             SELECT ST_Distance(d.geom, o.geom)::float8 AS distance_m
             FROM city_objects o
-            WHERE o.type::text IN ('metro', 'station', 'hub', 'bus_station')
+            WHERE o.type::text IN ('metro', 'station', 'hub', 'bus_station', 'airport')
               AND ST_DWithin(d.geom, o.geom, 20000)
             ORDER BY ST_Distance(d.geom, o.geom)
             LIMIT 1
@@ -133,7 +133,7 @@ async fn recalculate_accessibility(
           LEFT JOIN LATERAL (
             SELECT COUNT(*)::float8 AS stop_count
             FROM city_objects o
-            WHERE o.type::text IN ('stop', 'metro', 'station', 'hub', 'bus_station')
+            WHERE o.type::text IN ('stop', 'metro', 'station', 'hub', 'bus_station', 'airport')
               AND ST_DWithin(d.geom, o.geom, 7000)
           ) coverage ON true
         ),
